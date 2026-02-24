@@ -91,7 +91,7 @@
   "last_deactivated": "2026-02-24T20:23:47+01:00",
   "global_config": {
     "heartbeat_prompt": "You are in AGENTIC mode. Reason about what needs attention. Check your schedules, running tasks, and pending work. Decide what to do next based on priority and impact. Create tasks if needed. You have hard limits - respect them.",
-    "base_interval_minutes": 20,
+    "base_interval_minutes": 10,
     "max_interval_minutes": 120,
     "work_hours": "09:00-18:00",
     "quiet_mode_enabled": true
