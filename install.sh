@@ -1,78 +1,207 @@
 #!/bin/bash
-# Quick install script for sharing
-# This script can be run directly by a friend
+# Agentic Autonomy - Installation Script
+# This script sets up the plugin for immediate use
 
 set -e
 
-echo "=== Autonomy Skill Installer ==="
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║     AGENTIC AUTONOMY PLUGIN - INSTALLATION               ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
 echo ""
 
-# Detect OpenClaw workspace
-if [[ -n "$OPENCLAW_WORKSPACE" ]]; then
-  WORKSPACE="$OPENCLAW_WORKSPACE"
-elif [[ -d "$HOME/.openclaw/workspace" ]]; then
-  WORKSPACE="$HOME/.openclaw/workspace"
-elif [[ -d "/root/.openclaw/workspace" ]]; then
-  WORKSPACE="/root/.openclaw/workspace"
-else
-  echo "Error: Could not find OpenClaw workspace"
-  echo "Set OPENCLAW_WORKSPACE environment variable"
-  exit 1
+AUTONOMY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(dirname "$AUTONOMY_DIR")"
+
+echo "📁 Installation Directory: $AUTONOMY_DIR"
+echo ""
+
+# Check dependencies
+echo "🔍 Checking dependencies..."
+MISSING=()
+
+if ! command -v jq >/dev/null 2>&1; then
+    MISSING+=("jq")
 fi
 
-echo "Found workspace: $WORKSPACE"
-
-# Check if we're in extracted folder or need to download
-if [[ -f "./SKILL.md" && -f "./autonomy" ]]; then
-  # Running from extracted folder
-  SOURCE_DIR="$(pwd)"
-  echo "Installing from: $SOURCE_DIR"
-else
-  echo "Error: Run this script from the extracted autonomy folder"
-  exit 1
+if ! command -v python3 >/dev/null 2>&1; then
+    MISSING+=("python3")
 fi
 
-# Create skills directory
-mkdir -p "$WORKSPACE/skills"
-
-# Copy skill files
-if [[ -d "$WORKSPACE/skills/autonomy" ]]; then
-  echo "Backing up existing autonomy skill..."
-  mv "$WORKSPACE/skills/autonomy" "$WORKSPACE/skills/autonomy.backup.$(date +%s)"
+if ! command -v git >/dev/null 2>&1; then
+    MISSING+=("git")
 fi
 
-cp -r "$SOURCE_DIR" "$WORKSPACE/skills/autonomy"
-echo "✓ Skill files copied"
+if [ ${#MISSING[@]} -gt 0 ]; then
+    echo "❌ Missing dependencies: ${MISSING[*]}"
+    echo "Please install them and run again."
+    exit 1
+fi
+
+echo "✅ All dependencies found"
+echo ""
+
+# Create required directories
+echo "📂 Creating directories..."
+mkdir -p "$AUTONOMY_DIR"/{tasks,agents,tools,logs,state,backups,contexts}
+echo "✅ Directories created"
+echo ""
 
 # Set permissions
-chmod +x "$WORKSPACE/skills/autonomy/autonomy"
-chmod +x "$WORKSPACE/skills/autonomy/scripts/"*.sh
-chmod +x "$WORKSPACE/skills/autonomy/checks/"*.sh
-echo "✓ Permissions set"
+echo "🔐 Setting permissions..."
+chmod +x "$AUTONOMY_DIR"/autonomy
+chmod +x "$AUTONOMY_DIR"/checks/*.sh 2>/dev/null || true
+chmod +x "$AUTONOMY_DIR"/lib/*.sh 2>/dev/null || true
+echo "✅ Permissions set"
+echo ""
 
-# Create default context if none exists
-if [[ ! -f "$WORKSPACE/skills/autonomy/contexts/default.json" ]]; then
-  cp "$WORKSPACE/skills/autonomy/contexts/example-default.json" \
-     "$WORKSPACE/skills/autonomy/contexts/default.json"
+# Initialize config if not exists
+if [ ! -f "$AUTONOMY_DIR/config.json" ]; then
+    echo "⚙️  Initializing configuration..."
+    cat > "$AUTONOMY_DIR/config.json" << 'EOF'
+{
+  "skill": "autonomy",
+  "version": "2.0.8",
+  "name": "Agentic Autonomy",
+  "description": "AI-driven self-improving autonomy for OpenClaw agents",
+  "status": "active",
+  "mode": "agentic",
+  "agentic_config": {
+    "enabled": true,
+    "reasoning_model": "kimi-coding/k2p5",
+    "thinking": "high",
+    "hard_limits": {
+      "max_concurrent_tasks": 5,
+      "max_sub_agents": 3,
+      "max_schedules": 5,
+      "daily_token_budget": 50000,
+      "max_reasoning_depth": 3,
+      "max_file_edits_per_session": 50,
+      "max_web_searches": 10
+    },
+    "requires_approval": [
+      "external_api_calls",
+      "sending_messages",
+      "file_deletion",
+      "public_posts",
+      "git_push",
+      "installing_packages"
+    ],
+    "auto_approve": [
+      "reading_files",
+      "writing_workspace_files",
+      "local_commands",
+      "web_search",
+      "memory_search"
+    ],
+    "completion_criteria": {
+      "require_verification": true,
+      "max_attempts": 3,
+      "success_definition": "Task works as intended and passes basic tests",
+      "anti_hallucination": {
+        "verify_files_exist": true,
+        "verify_commands_work": true,
+        "require_evidence": true,
+        "self_review": true
+      }
+    },
+    "innovation_guards": {
+      "prevent_redundant_builds": true,
+      "check_existing_solutions": true,
+      "require_impact_assessment": true,
+      "max_iterations_per_task": 5,
+      "completion_threshold": "good_enough_not_perfect"
+    }
+  },
+  "workstation": {
+    "active": false,
+    "tasks": [],
+    "running_agents": [],
+    "schedules": [],
+    "created_tools": [],
+    "token_usage_today": 0
+  },
+  "default_state": "off",
+  "active_context": null,
+  "last_activated": null,
+  "last_deactivated": null,
+  "global_config": {
+    "heartbeat_prompt": "You are in AGENTIC mode. Reason about what needs attention. Check your schedules, running tasks, and pending work. Decide what to do next based on priority and impact. Create tasks if needed. You have hard limits - respect them.",
+    "base_interval_minutes": 20,
+    "max_interval_minutes": 120,
+    "work_hours": "09:00-18:00",
+    "quiet_mode_enabled": true
+  },
+  "contexts_dir": "contexts",
+  "tasks_dir": "tasks",
+  "agents_dir": "agents",
+  "tools_dir": "tools",
+  "logs_dir": "logs"
+}
+EOF
+    echo "✅ Configuration initialized"
+else
+    echo "✅ Configuration already exists"
+fi
+echo ""
+
+# Create symlink for easy access
+if [ -d "$WORKSPACE_DIR" ]; then
+    echo "🔗 Creating symlink..."
+    ln -sf "$AUTONOMY_DIR/autonomy" "$WORKSPACE_DIR/autonomy" 2>/dev/null || true
+    echo "✅ Symlink created"
+    echo ""
 fi
 
-# Create logs directory
-mkdir -p "$WORKSPACE/skills/autonomy/logs"
+# Check if HEARTBEAT.md exists in workspace
+if [ -f "$WORKSPACE_DIR/HEARTBEAT.md" ]; then
+    echo "📄 Found existing HEARTBEAT.md"
+    echo "   The plugin will use this for heartbeat instructions."
+else
+    echo "⚠️  No HEARTBEAT.md found in workspace"
+    echo "   Copying template..."
+    cp "$AUTONOMY_DIR/HEARTBEAT.md.template" "$WORKSPACE_DIR/HEARTBEAT.md" 2>/dev/null || true
+fi
+echo ""
 
+# Test the installation
+echo "🧪 Testing installation..."
+cd "$AUTONOMY_DIR"
+if bash autonomy status >/dev/null 2>&1; then
+    echo "✅ Installation test passed"
+else
+    echo "⚠️  Installation test had issues, but continuing..."
+fi
 echo ""
-echo "=== Installation Complete ==="
+
+# Start web UI
+echo "🌐 Starting web dashboard..."
+if ! pgrep -f "web_ui.py" >/dev/null 2>&1; then
+    nohup python3 "$AUTONOMY_DIR/web_ui.py" > /tmp/autonomy_webui.log 2>&1 &
+    sleep 2
+    if pgrep -f "web_ui.py" >/dev/null 2>&1; then
+        echo "✅ Web dashboard started on http://localhost:8767"
+    else
+        echo "⚠️  Web dashboard failed to start (port may be in use)"
+    fi
+else
+    echo "✅ Web dashboard already running"
+fi
 echo ""
-echo "Usage:"
-echo "  $WORKSPACE/skills/autonomy/autonomy status"
-echo "  $WORKSPACE/skills/autonomy/autonomy on"
-echo "  $WORKSPACE/skills/autonomy/autonomy context add myproject ~/myproject"
+
+# Final message
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║              INSTALLATION COMPLETE! 🎉                   ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
 echo ""
-echo "Enable bash completions:"
-echo "  echo 'source $WORKSPACE/skills/autonomy/completions/autonomy.bash' >> ~/.bashrc"
+echo "🚀 Quick Start:"
+echo "   autonomy on                      # Activate"
+echo "   autonomy work 'Your task here'   # Give it work"
+echo "   autonomy status                  # Check status"
 echo ""
-echo "For Discord notifications:"
-echo "  $WORKSPACE/skills/autonomy/scripts/setup-discord.sh YOUR_BOT_TOKEN"
+echo "🌐 Web Dashboard: http://localhost:8767"
+echo "📚 Documentation:  SKILL.md"
+echo "⚙️  Config:        config.json"
 echo ""
-echo "Documentation:"
-echo "  $WORKSPACE/skills/autonomy/README.md"
-echo "  $WORKSPACE/skills/autonomy/NOTIFICATIONS.md"
+echo "The plugin is now ready to use!"
+echo "It will respond to heartbeats and improve itself automatically."
+echo ""
