@@ -23,16 +23,19 @@
   <text x="480" y="175" text-anchor="middle" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10">rar-file/</text>
   <text x="480" y="188" text-anchor="middle" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10">autonomy</text>
   
-  <!-- Arrow: Check -->
-  <path d="M 190 120 L 280 120" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowgray)"/>
-  <text x="235" y="110" text-anchor="middle" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10">Check</text>
+  <!-- Arrow: Check (left to right) -->
+  <line x1="190" y1="120" x2="225" y2="120" stroke="#8b949e" stroke-width="2"/>
+  <polygon points="220,115 230,120 220,125" fill="#8b949e"/>
+  <text x="210" y="110" text-anchor="middle" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10">Check</text>
   
-  <!-- Arrow: Update Available -->
-  <path d="M 320 140 L 410 140" stroke="#f85149" stroke-width="2" marker-end="url(#arrowred)"/>
+  <!-- Arrow: Update Available (right to left) -->
+  <line x1="375" y1="140" x2="410" y2="140" stroke="#f85149" stroke-width="2"/>
+  <polygon points="370,135 380,140 370,145" fill="#f85149"/>
   <text x="365" y="155" text-anchor="middle" fill="#f85149" font-family="system-ui, -apple-system, sans-serif" font-size="10">Update Available</text>
   
-  <!-- Arrow: Download -->
-  <path d="M 320 165 L 410 165" stroke="#238636" stroke-width="2" marker-end="url(#arrowgreen)"/>
+  <!-- Arrow: Download (right to left) -->
+  <line x1="375" y1="165" x2="410" y2="165" stroke="#238636" stroke-width="2"/>
+  <polygon points="370,160 380,165 370,170" fill="#238636"/>
   <text x="365" y="180" text-anchor="middle" fill="#238636" font-family="system-ui, -apple-system, sans-serif" font-size="10">Download &amp; Apply</text>
   
   <!-- Status Box -->
@@ -41,16 +44,4 @@
   <text x="300" y="115" text-anchor="middle" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="9">Compare versions</text>
   <text x="300" y="130" text-anchor="middle" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="9">Backup current</text>
   <text x="300" y="145" text-anchor="middle" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="9">Preserve configs</text>
-  
-  <defs>
-    <marker id="arrowgray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#8b949e"/>
-    </marker>
-    <marker id="arrowred" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#f85149"/>
-    </marker>
-    <marker id="arrowgreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#238636"/>
-    </marker>
-  </defs>
 </svg>
