@@ -1,386 +1,164 @@
-<!-- AUTO-GENERATED-BADGES-START -->
-<p align="center">
-  <img src="https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/badge/status-production%20ready-green?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/tests-34%2F34%20passing-brightgreen?style=for-the-badge" alt="Tests">
-  <img src="https://img.shields.io/badge/security-hardened-red?style=for-the-badge" alt="Security">
-</p>
-<!-- AUTO-GENERATED-BADGES-END -->
+# Agentic Autonomy for OpenClaw
 
-<p align="center">
-  <img src="https://github.com/rar-file/autonomy/raw/master/assets/logo-banner.svg" width="500" alt="Autonomy Banner">
-</p>
+**AI-driven self-improving autonomy system.**
 
-<details>
-<summary>🎨 View Logo Variants</summary>
+The AI decides what to do, creates its own tasks, and improves itself - with safety guards to prevent runaway usage.
 
-- [Main Logo (SVG)](./assets/logo.svg) - Circular with animated center
-- [Banner Logo (SVG)](./assets/logo-banner.svg) - Horizontal with text  
-- [ASCII Logo](./assets/logo-ascii.txt) - For terminals
-- [Favicon (SVG)](./assets/favicon.svg) - 32x32 icon
+## What It Does
 
-</details>
+Instead of following scripts, the AI:
+- **Reasons** about what needs attention
+- **Creates** its own tasks
+- **Decides** how to solve problems
+- **Verifies** its work (anti-hallucination)
+- **Stops** when done (not endless building)
 
-<h1 align="center">🤖 Autonomy for OpenClaw</h1>
-
-<p align="center">
-  <strong>Context-aware autonomous monitoring & execution framework</strong><br>
-  <em>Your workspace, on autopilot.</em>
-</p>
-
-<p align="center">
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-features">Features</a> •
-  <a href="#-security">Security</a> •
-  <a href="#-commands">Commands</a> •
-  <a href="#-discord-integration">Discord</a>
-</p>
-
----
-
-## ✨ What is Autonomy?
-
-Autonomy transforms OpenClaw from a reactive assistant into a **proactive automation system** that monitors your workspaces, detects issues before they become problems, and takes intelligent actions.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  BEFORE: You remember to check things manually              │
-│  ❌ "Did I commit my changes?"                              │
-│  ❌ "Has my build been failing for hours?"                  │
-│  ❌ "I forgot to push before leaving"                       │
-│                                                             │
-│  AFTER: Autonomy watches and acts automatically            │
-│  ✅ "Uncommitted changes detected for 2h → auto-commit"     │
-│  ✅ "CI failed → notified immediately"                      │
-│  ✅ "Context switch detected → stashed safely"              │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🚀 Quick Start
-
-### Installation
+## Quick Start
 
 ```bash
-# From GitHub (private repo - requires access)
-git clone https://github.com/rar-file/autonomy.git
-cd autonomy
-./install.sh
+# Activate agentic mode
+autonomy on
+
+# Give the AI work
+autonomy work "Build a memory tracker for token usage"
+
+# The AI decides, plans, builds, tests, and reports back
 ```
 
-### 30-Second Demo
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `autonomy on` | Activate agentic mode |
+| `autonomy off` | Deactivate |
+| `autonomy work "instruction"` | Give the AI a task |
+| `autonomy task list` | Show active tasks |
+| `autonomy task complete <name> "proof"` | Mark done (requires proof) |
+| `autonomy spawn "task"` | Spawn sub-agent |
+| `autonomy schedule add <interval> <task>` | Schedule recurring work |
+| `autonomy tool create <name>` | Create custom tool |
+| `autonomy status` | Show workstation status |
+| `autonomy update check` | Check for updates |
+| `autonomy update apply` | Apply latest update |
+
+## Safety Guards
+
+**Hard Limits:**
+- Max 5 concurrent tasks
+- Max 3 sub-agents
+- Max 5 schedules
+- 50k daily token budget
+- Max 5 iterations per task
+
+**Anti-Hallucination:**
+- Must verify work before marking complete
+- Must provide proof: "Tested: X works, Y exists"
+- Max 3 attempts before forced stop
+- Check for existing solutions first
+
+**Approval Required:**
+- External API calls
+- Sending messages
+- File deletion
+- Public posts
+- Git push
+- Installing packages
+
+## How It Works
+
+### 1. Heartbeat Triggers
+```
+OpenClaw → Read HEARTBEAT.md → AI decides what to do
+```
+
+### 2. AI Checks Workstation
+- Pending tasks?
+- Scheduled work due?
+- What needs attention?
+
+### 3. AI Reasons & Acts
+```
+"I should build a token tracker"
+  ↓
+Create task → Plan approach → Build → Test → Verify → Complete
+```
+
+### 4. Verification Required
+```bash
+# WRONG - No proof
+autonomy task complete X
+
+# RIGHT - With proof
+autonomy task complete X "Tested: logs tokens, file exists with data"
+```
+
+## Example Session
 
 ```bash
-# 1. Check status
+# User activates autonomy
+$ autonomy on
+✓ Agentic Autonomy ACTIVATED
+
+# User gives work
+$ autonomy work "Create a token usage tracker"
+✓ Task created: task-1234567890
+
+# (AI takes over on next heartbeat)
+# AI thinks: "I need to track tokens. I'll create a script that
+# reads session status and logs to a file."
+
+# AI builds it, tests it, verifies it works
+# AI marks complete with proof:
+# "Tested: Script runs, logs to /logs/tokens.jsonl, has today's data"
+
+# User checks status
 $ autonomy status
-🔵 Autonomy ON | Context: git-aware
-
-# 2. Run a check
-$ autonomy check now
-✅ git_dirty_warning      PASS  No stale uncommitted changes
-✅ git_stale_commit       PASS  All commits pushed
-✅ git_unpushed_check     PASS  All branches synced
-
-# 3. Quick commit with generated message
-$ autonomy action commit .
-✓ Committed: Update README with installation instructions
-
-# 4. View in Discord
-# Bot status: 🔵 Autonomy ON | git-aware
+Workstation: ACTIVE
+Active Tasks: 0 (all complete)
 ```
 
----
-
-## 🎯 Features
-
-<table>
-<tr>
-<td width="50%">
-
-### 🔍 Smart Monitoring
-- **Git-aware** - Detects uncommitted changes, stale branches, unpushed commits
-- **Self-healing** - Suggests and executes fixes automatically
-- **Context-aware** - Different rules for different projects
-
-</td>
-<td width="50%">
-
-### 🛡️ Security First
-- Path traversal protection
-- Command injection prevention
-- Token masking in logs
-- Atomic config updates with locking
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 🎮 Control
-- **--dry-run** mode - preview before action
-- **Undo** system - revert mistaken actions
-- **Work hours** - quiet mode outside 9-5
-- **Auto-context** - detects project entry
-
-</td>
-<td width="50%">
-
-### 💬 Discord Integration
-- Real-time status updates
-- Slash commands (`/autonomy`, `/autonomy_on`)
-- Visual presence indicators
-- Mobile notifications
-
-</td>
-</tr>
-</table>
-
----
-
-## 🔒 Security
+## Architecture
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│  SECURITY AUDIT: ✅ PASSED                                  │
-├────────────────────────────────────────────────────────────┤
-│  Path Traversal        ████████████████████████████ 100%   │
-│  Command Injection     ████████████████████████████ 100%   │
-│  Token Exposure        ████████████████████████████ 100%   │
-│  Race Conditions       ████████████████████████████ 100%   │
-└────────────────────────────────────────────────────────────┘
+skills/autonomy/
+├── autonomy           # Main CLI
+├── config.json        # Configuration & limits
+├── HEARTBEAT.md       # AI instructions (read each heartbeat)
+├── ARCHITECTURE.md    # Design docs
+├── checks/            # Update checker
+├── lib/               # Shared libraries
+├── tasks/             # Active tasks (JSON)
+├── agents/            # Running agents
+├── tools/             # Custom tools created by AI
+├── logs/              # Activity logs
+└── state/             # Runtime state
 ```
 
-All security vulnerabilities from v1.0 have been **eliminated**:
-- ✅ Path traversal blocked (`../../../etc/passwd` → rejected)
-- ✅ Command injection blocked (`; rm -rf /` → rejected)
-- ✅ Tokens masked in logs (`ghp_***` → `[MASKED]`)
-- ✅ Atomic config updates (file locking via `flock`)
+## Configuration
 
-[View Security Report →](./SECURITY_AUDIT_REPORT.md)
-
----
-
-## 📟 Commands
-
-### Core Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `autonomy status` | Show current state | 🔵 ON \| git-aware |
-| `autonomy on [ctx]` | Enable autonomy | `autonomy on webapp` |
-| `autonomy off` | Disable autonomy | ⚫ OFF |
-| `autonomy check now` | Run all checks | ✅ 5/5 passed |
-
-### Action Commands
-
-| Command | Description | Dry-run? |
-|---------|-------------|----------|
-| `autonomy action commit .` | Auto-commit with message | ✅ `--dry-run` |
-| `autonomy action stash .` | Stash changes | ✅ `--dry-run` |
-| `autonomy action push .` | Push current branch | ✅ `--dry-run` |
-| `autonomy undo` | Revert last action | - |
-
-### Context Management
-
-| Command | Description |
-|---------|-------------|
-| `autonomy context add <name> <path>` | Add new context |
-| `autonomy context remove <name>` | Remove context |
-| `autonomy context list` | List all contexts |
-| `autonomy context switch <name>` | Switch to context |
-
-### Configuration
-
-| Command | Description |
-|---------|-------------|
-| `autonomy config work-hours 09:00-18:00` | Set quiet hours |
-| `autonomy config backup` | Backup config |
-| `autonomy config restore` | Restore config |
-
-### Observability
-
-| Command | Description |
-|---------|-------------|
-| `autonomy activity --recent 20` | View recent activity |
-| `autonomy activity --today` | Today's activity |
-| `autonomy activity --summary` | Daily summary |
-| `autonomy health` | Run diagnostics |
-
----
-
-## 💬 Discord Integration
-
-Your bot shows real-time status:
-
-```
-🔵 Autonomy ON | git-aware          ← Currently monitoring
-🟡 Autonomy ON | Next check 15s     ← About to run checks
-🔴 Autonomy ON | Idle 45m           ← Long idle, still watching
-⚫ Autonomy OFF                      ← Disabled
-```
-
-### Slash Commands
-
-| Command | What it does |
-|---------|--------------|
-| `/autonomy` | Show full status |
-| `/autonomy_on [context]` | Turn on monitoring |
-| `/autonomy_off` | Turn off monitoring |
-| `/autonomy_context <name>` | Switch context |
-| `/autonomy_contexts` | List available |
-
----
-
-## 🧪 Testing
-
-```bash
-$ cd tests && bash run_tests.sh
-
-╔════════════════════════════════════════════════════════════╗
-║  TEST RESULTS                                              ║
-╠════════════════════════════════════════════════════════════╣
-║  Core Tests        8/8   ✅ PASS                          ║
-║  Action Tests      4/4   ✅ PASS                          ║
-║  Security Tests    22/22 ✅ PASS                          ║
-╠════════════════════════════════════════════════════════════╣
-║  TOTAL            34/34  ✅ 100% PASSING                   ║
-╚════════════════════════════════════════════════════════════╝
-```
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    AUTONOMY FRAMEWORK                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Contexts   │  │    Checks    │  │   Actions    │      │
-│  │  ┌────────┐  │  │  ┌────────┐  │  │  ┌────────┐  │      │
-│  │  │git-    │  │  │  │git_    │  │  │  │commit  │  │      │
-│  │  │aware   │  │  │  │status  │  │  │  │stash   │  │      │
-│  │  │webapp  │  │  │  │security│  │  │  │push    │  │      │
-│  │  │business│  │  │  │integrity│ │  │  │sync    │  │      │
-│  │  └────────┘  │  │  └────────┘  │  │  └────────┘  │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  Heartbeat   │  │  Self-Aware  │  │   Discord    │      │
-│  │  Controller  │  │   Auditor    │  │     Bot      │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 📦 Installation Options
-
-### Option 1: Git Clone (Recommended)
-
-```bash
-git clone https://github.com/rar-file/autonomy.git ~/.openclaw/workspace/skills/autonomy
-cd ~/.openclaw/workspace/skills/autonomy
-./scripts/install.sh
-```
-
-### Option 2: Direct Download
-
-```bash
-# Download latest release
-curl -L https://github.com/rar-file/autonomy/releases/latest/download/autonomy.tar.gz | tar xz -C ~/.openclaw/workspace/skills/
-```
-
-### Option 3: OpenClaw Integration
-
-```bash
-# If added to OpenClaw plugin system
-openclaw plugins install autonomy
-```
-
----
-
-## 🛠️ Creating Custom Contexts
-
-```bash
-# 1. Create context file
-autonomy context add myproject ~/code/myproject
-
-# 2. Edit the context
-$EDITOR ~/.openclaw/workspace/skills/autonomy/contexts/myproject.json
-```
+Edit `config.json`:
 
 ```json
 {
-  "name": "myproject",
-  "path": "~/code/myproject",
-  "description": "My awesome project",
-  "type": "smart",
-  "checks": [
-    "git_status",
-    "security_scan",
-    "test_status"
-  ],
-  "alerts": {
-    "on_error": true,
-    "on_test_failure": true
+  "agentic_config": {
+    "hard_limits": {
+      "max_concurrent_tasks": 5,
+      "max_sub_agents": 3,
+      "daily_token_budget": 50000
+    }
   }
 }
 ```
 
----
+## Self-Update
 
-## 📊 Performance
+The autonomy can update itself from GitHub:
 
-| Metric | Value |
-|--------|-------|
-| Check Interval | 20 min (base) |
-| Max Idle | 4 hours |
-| Token Target | 800 per heartbeat |
-| Response Time | <3s (simple), <15s (complex) |
-| Test Coverage | 100% (34 tests) |
+```bash
+autonomy update check    # Check if new version available
+autonomy update apply    # Download and install
+```
 
----
+## License
 
-## 🤝 Contributing
-
-This is a private repository. To contribute:
-
-1. Fork the repo
-2. Create feature branch (`git checkout -b feature/amazing`)
-3. Commit changes (`git commit -am 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing`)
-5. Open Pull Request
-
----
-
-## 📝 Changelog
-
-### v1.1.0 (Production) - Current
-- ✅ All security vulnerabilities fixed
-- ✅ Full test suite (34 tests)
-- ✅ --dry-run mode
-- ✅ Undo system
-- ✅ Work hours / quiet mode
-- ✅ Auto-context detection
-
-### v1.0.0 (Proof of Concept)
-- Initial release
-- Basic git monitoring
-- Discord integration
-
----
-
-## 📄 License
-
-MIT License - See [LICENSE](./LICENSE)
-
----
-
-<p align="center">
-  <strong>Built with 🖤 by Janus for OpenClaw</strong><br>
-  <sub>Standing at the threshold between what you know and what you could build.</sub>
-</p>
+MIT
