@@ -10,23 +10,12 @@
   <img src="https://img.shields.io/badge/status-active-brightgreen.svg" alt="Status: Active">
 </p>
 
-**AI-driven self-improving autonomy system for OpenClaw.**
-
-The AI decides what to do, creates its own tasks, and improves itself — with safety guards to prevent runaway usage.
+<p align="center">
+  <b>AI-driven self-improving autonomy system for OpenClaw.</b><br>
+  The AI decides what to do, creates its own tasks, and improves itself — with safety guards to prevent runaway usage.
+</p>
 
 ---
-
-## What It Does
-
-Instead of following scripts, the AI:
-
-| Traditional | Agentic (This) |
-|------------|----------------|
-| Follows hardcoded phases | **Reasons** about what needs attention |
-| Runs predefined checks | **Creates** its own tasks |
-| Executes commands | **Decides** how to solve problems |
-| Reports results | **Verifies** its work (anti-hallucination) |
-| Keeps running | **Stops** when done (not endless building) |
 
 <p align="center">
   <img src="assets/diagram-workflow.svg" alt="Workflow" width="700">
@@ -81,6 +70,10 @@ autonomy work "Build a memory tracker for token usage"
 
 ## Safety Guards
 
+<p align="center">
+  <img src="assets/diagram-limits.svg" alt="Safety Limits" width="600">
+</p>
+
 ### Hard Limits
 
 | Limit | Value | Purpose |
@@ -90,10 +83,6 @@ autonomy work "Build a memory tracker for token usage"
 | Max schedules | 5 | Control recurring work |
 | Daily token budget | 50,000 | Cost protection |
 | Max iterations per task | 5 | Stop endless building |
-
-<p align="center">
-  <img src="assets/diagram-limits.svg" alt="Safety Limits" width="600">
-</p>
 
 ### Anti-Hallucination
 
@@ -124,15 +113,15 @@ These actions need explicit approval:
 
 ## How It Works
 
+<p align="center">
+  <img src="assets/diagram-heartbeat.svg" alt="Heartbeat Flow" width="500">
+</p>
+
 ### 1. Heartbeat Triggers
 
 ```
 OpenClaw → Read HEARTBEAT.md → AI decides what to do
 ```
-
-<p align="center">
-  <img src="assets/diagram-heartbeat.svg" alt="Heartbeat Flow" width="500">
-</p>
 
 ### 2. AI Checks Workstation
 
@@ -218,11 +207,13 @@ skills/autonomy/
   <img src="assets/logo.svg" alt="Logo" width="200">
 </p>
 
-This plugin includes visual assets:
-- `assets/logo.svg` - Main logo
-- `assets/logo-banner.svg` - Banner for README
-- `assets/logo-ascii.txt` - ASCII art for terminal
-- `assets/favicon.svg` - Favicon for web UI
+<p align="center">
+This plugin includes visual assets:<br>
+  <code>assets/logo.svg</code> — Main logo<br>
+  <code>assets/logo-banner.svg</code> — Banner for README<br>
+  <code>assets/logo-ascii.txt</code> — ASCII art for terminal<br>
+  <code>assets/favicon.svg</code> — Favicon for web UI
+</p>
 
 ---
 
@@ -267,12 +258,7 @@ autonomy update apply    # Download and install
 
 ---
 
-## License
-
-MIT
-
----
-
 <p align="center">
+  <b>MIT License</b><br>
   <sub>Built for OpenClaw — AI that decides, verifies, and improves itself.</sub>
 </p>
