@@ -198,6 +198,15 @@ All security vulnerabilities from v1.0 have been **eliminated**:
 | `autonomy config backup` | Backup config |
 | `autonomy config restore` | Restore config |
 
+### Observability
+
+| Command | Description |
+|---------|-------------|
+| `autonomy activity --recent 20` | View recent activity |
+| `autonomy activity --today` | Today's activity |
+| `autonomy activity --summary` | Daily summary |
+| `autonomy health` | Run diagnostics |
+
 ---
 
 ## 💬 Discord Integration
