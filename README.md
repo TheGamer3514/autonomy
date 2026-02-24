@@ -8,14 +8,14 @@
 <!-- AUTO-GENERATED-BADGES-END -->
 
 <p align="center">
-  <img src="https://github.com/rar-file/autonomy/raw/master/assets/logo.svg" width="200" alt="Autonomy Logo">
+  <img src="https://github.com/rar-file/autonomy/raw/master/assets/logo-banner.svg" width="500" alt="Autonomy Banner">
 </p>
 
 <details>
 <summary>🎨 View Logo Variants</summary>
 
-- [Main Logo (SVG)](./assets/logo.svg) - Animated with pulsing center
-- [Banner Logo (SVG)](./assets/logo-banner.svg) - Horizontal with text
+- [Main Logo (SVG)](./assets/logo.svg) - Circular with animated center
+- [Banner Logo (SVG)](./assets/logo-banner.svg) - Horizontal with text  
 - [ASCII Logo](./assets/logo-ascii.txt) - For terminals
 - [Favicon (SVG)](./assets/favicon.svg) - 32x32 icon
 
