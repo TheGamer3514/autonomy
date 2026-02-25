@@ -87,6 +87,10 @@ show_agentic_status() {
         echo -e "  ${RED}○${NC} Workstation: INACTIVE"
     fi
     echo "  Mode: ${CYAN}$mode${NC}"
+    
+    # Show autonomy level
+    local level=$(get_config '.agentic_config.autonomy_level // "semi-autonomous"')
+    echo "  Level: ${CYAN}$level${NC}"
     echo ""
     
     # Show current tasks
@@ -151,6 +155,35 @@ cmd_on() {
     echo "  Run 'autonomy status' to monitor."
     
     log_activity "workstation_activated" "{}"
+    
+    # Auto-start heartbeat daemon if not already running
+    local scheduler_type=$(get_config '.scheduler.type // "daemon"')
+    if [[ "$scheduler_type" == "daemon" ]]; then
+        if [[ -f "$AUTONOMY_DIR/state/heartbeat-daemon.pid" ]]; then
+            local daemon_pid=$(cat "$AUTONOMY_DIR/state/heartbeat-daemon.pid" 2>/dev/null)
+            if ! ps -p "$daemon_pid" > /dev/null 2>&1; then
+                rm -f "$AUTONOMY_DIR/state/heartbeat-daemon.pid"
+                echo ""
+                echo "  Starting heartbeat daemon..."
+                "$AUTONOMY_DIR/daemon.sh" start > /dev/null 2>&1
+                sleep 1
+                if [[ -f "$AUTONOMY_DIR/state/heartbeat-daemon.pid" ]]; then
+                    echo -e "  ${GREEN}✓${NC} Daemon started (auto-runs every 10 min)"
+                fi
+            else
+                echo ""
+                echo -e "  ${GREEN}✓${NC} Daemon already running (PID: $daemon_pid)"
+            fi
+        else
+            echo ""
+            echo "  Starting heartbeat daemon..."
+            "$AUTONOMY_DIR/daemon.sh" start > /dev/null 2>&1
+            sleep 1
+            if [[ -f "$AUTONOMY_DIR/state/heartbeat-daemon.pid" ]]; then
+                echo -e "  ${GREEN}✓${NC} Daemon started (auto-runs every 10 min)"
+            fi
+        fi
+    fi
 }
 
 # Deactivate
@@ -243,6 +276,11 @@ EOF
                     echo "  Verification: $verification"
                 fi
                 log_activity "task_completed" "{\"name\": \"$name\", \"verification\": \"$verification\"}"
+                
+                # Send email notification if enabled
+                if [[ -f "$AUTONOMY_DIR/lib/notify.sh" ]]; then
+                    bash "$AUTONOMY_DIR/lib/notify.sh" task-complete "$name" "$verification" > /dev/null 2>&1 || true
+                fi
             else
                 echo -e "${RED}Error:${NC} Task not found: $name"
                 return 1
@@ -390,6 +428,83 @@ TOOL_HEADER
     esac
 }
 
+# Install/configure scheduler
+# Install/configure scheduler
+cmd_install() {
+    local scheduler_type="${1:-daemon}"
+    
+    case "$scheduler_type" in
+        daemon)
+            echo "Switching to built-in daemon scheduler..."
+            
+            # Stop cron if exists
+            if crontab -l 2>/dev/null | grep -q "autonomy.*daemon"; then
+                (crontab -l 2>/dev/null | grep -v "autonomy.*daemon") | crontab -
+                echo "  Removed cron entry"
+            fi
+            
+            # Update config
+            local tmp_file="${CONFIG}.tmp"
+            jq '.scheduler.type = "daemon" | .scheduler.auto_start = true' "$CONFIG" > "$tmp_file" && mv "$tmp_file" "$CONFIG"
+            
+            # Start daemon
+            "$AUTONOMY_DIR/daemon.sh" restart 2>/dev/null || "$AUTONOMY_DIR/daemon.sh" start
+            
+            echo -e "${GREEN}✓${NC} Now using built-in daemon"
+            echo "  Auto-starts when you run 'autonomy on'"
+            ;;
+            
+        cron)
+            echo "Switching to system cron scheduler..."
+            
+            # Stop daemon
+            "$AUTONOMY_DIR/daemon.sh" stop 2>/dev/null
+            
+            # Add cron entry
+            local cron_cmd="cd $AUTONOMY_DIR && bash daemon.sh once >> logs/cron.log 2>&1"
+            local cron_entry="*/10 * * * * $cron_cmd"
+            
+            # Remove existing entries first
+            (crontab -l 2>/dev/null | grep -v "autonomy.*daemon") | crontab -
+            
+            # Add new entry
+            (crontab -l 2>/dev/null; echo "$cron_entry") | crontab -
+            
+            # Update config
+            local tmp_file="${CONFIG}.tmp"
+            jq '.scheduler.type = "cron" | .scheduler.auto_start = false' "$CONFIG" > "$tmp_file" && mv "$tmp_file" "$CONFIG"
+            
+            echo -e "${GREEN}✓${NC} Now using system cron"
+            echo "  Cron entry added: Every 10 minutes"
+            echo "  Verify with: crontab -l"
+            ;;
+            
+        auto)
+            echo "Auto-detecting best scheduler..."
+            
+            # Check if cron is available
+            if command -v crontab >/dev/null 2>&1; then
+                # Try to use cron (more reliable)
+                cmd_install cron
+            else
+                # Fall back to daemon
+                cmd_install daemon
+            fi
+            ;;
+            
+        *)
+            echo "Usage: autonomy install {daemon|cron|auto}"
+            echo ""
+            echo "Scheduler types:"
+            echo "  daemon  - Built-in daemon (default, works everywhere)"
+            echo "  cron    - System cron (survives reboots, requires crontab)"
+            echo "  auto    - Auto-detect best option"
+            echo ""
+            echo "Current: $(get_config '.scheduler.type // \"daemon\"')"
+            ;;
+    esac
+}
+
 # Work on something (the main entry point)
 cmd_work() {
     local instruction="$*"
@@ -458,15 +573,163 @@ cmd_update() {
     fi
 }
 
+# Manage autonomy levels
+cmd_level() {
+    if [[ -f "$AUTONOMY_DIR/lib/autonomy-levels.sh" ]]; then
+        bash "$AUTONOMY_DIR/lib/autonomy-levels.sh" "$@"
+    else
+        echo "Autonomy levels not available"
+    fi
+}
+
+# Configuration wizard
+cmd_wizard() {
+    echo "═══════════════════════════════════════════════════════"
+    echo "  Autonomy Configuration Wizard"
+    echo "═══════════════════════════════════════════════════════"
+    echo ""
+    
+    # Step 1: Workstation activation
+    echo "Step 1: Workstation Activation"
+    read -p "Enable agentic autonomy? (y/n): " enable
+    if [[ "$enable" == "y" ]]; then
+        cmd_on
+    fi
+    echo ""
+    
+    # Step 2: Scheduler setup
+    echo "Step 2: Scheduler Setup"
+    echo "  1) Built-in daemon (recommended)"
+    echo "  2) System cron"
+    read -p "Choose scheduler (1/2): " scheduler
+    if [[ "$scheduler" == "1" ]]; then
+        cmd_install daemon
+    elif [[ "$scheduler" == "2" ]]; then
+        cmd_install cron
+    fi
+    echo ""
+    
+    # Step 3: Web UI
+    echo "Step 3: Web UI"
+    read -p "Start web UI? (y/n): " webui
+    if [[ "$webui" == "y" ]]; then
+        cd "$AUTONOMY_DIR" && nohup python3 web_ui.py > /tmp/webui.log 2>&1 &
+        echo "Web UI started on http://localhost:8767"
+    fi
+    echo ""
+    
+    # Step 4: Completion setup
+    echo "Step 4: Shell Completion"
+    echo "Add this to your ~/.bashrc:"
+    echo "  source $AUTONOMY_DIR/completion.sh"
+    echo ""
+    
+    echo "═══════════════════════════════════════════════════════"
+    echo "  Wizard Complete!"
+    echo "═══════════════════════════════════════════════════════"
+    echo ""
+    echo "Quick commands:"
+    echo "  autonomy status     - Check status"
+    echo "  autonomy work       - Give the AI a task"
+    echo "  autonomy daemon     - Control the daemon"
+}
+
+# Manage aliases
+cmd_alias() {
+    local alias_file="$AUTONOMY_DIR/state/aliases"
+    mkdir -p "$AUTONOMY_DIR/state"
+    
+    case "${1:-list}" in
+        list)
+            echo "Defined aliases:"
+            if [[ -f "$alias_file" ]]; then
+                cat "$alias_file" | while read line; do
+                    name=$(echo "$line" | cut -d= -f1)
+                    cmd=$(echo "$line" | cut -d= -f2-)
+                    echo "  $name -> $cmd"
+                done
+            else
+                echo "  No aliases defined"
+            fi
+            echo ""
+            echo "Usage: autonomy alias add <name> '<command>'"
+            echo "       autonomy alias remove <name>"
+            ;;
+        add)
+            shift
+            local name="$1"
+            shift
+            local cmd="$*"
+            echo "${name}=${cmd}" >> "$alias_file"
+            echo "Added alias: $name -> $cmd"
+            ;;
+        remove)
+            shift
+            local name="$1"
+            if [[ -f "$alias_file" ]]; then
+                grep -v "^${name}=" "$alias_file" > "${alias_file}.tmp" && mv "${alias_file}.tmp" "$alias_file"
+                echo "Removed alias: $name"
+            fi
+            ;;
+        *)
+            echo "Usage: autonomy alias {list|add <name> '<command>'|remove <name>}"
+            ;;
+    esac
+}
+
+# Check for updates
+cmd_check_updates() {
+    local current=$(get_config '.version // "2.0.0"')
+    echo "Current version: $current"
+    
+    # Check if git repo
+    if [[ -d "$AUTONOMY_DIR/.git" ]]; then
+        cd "$AUTONOMY_DIR"
+        git fetch origin 2>/dev/null
+        behind=$(git rev-list HEAD..origin/main --count 2>/dev/null || echo 0)
+        if [[ $behind -gt 0 ]]; then
+            echo "📦 Update available: $behind commits behind"
+            echo "Run 'autonomy update apply' to update"
+        else
+            echo "✅ Up to date"
+        fi
+    else
+        echo "Not a git repository - manual updates required"
+    fi
+}
+
 # Show help
 show_help() {
     cat << EOF
 Agentic Autonomy - AI-driven self-improvement for OpenClaw
 
 QUICK START:
+  onboard                  Interactive setup wizard (first time)
+  onboard quick            Quick auto-setup
   work "<instruction>"      Give the AI a task and let it decide how
-  on                       Activate agentic mode
+  on                       Activate agentic mode (auto-starts daemon)
   off                      Deactivate
+
+HEARTBEAT DAEMON (Self-contained scheduling):
+  daemon start             Start heartbeat daemon (every 10 min)
+  daemon stop              Stop the daemon
+  daemon restart           Restart the daemon
+  daemon status            Check if daemon is running
+  daemon once              Run a single heartbeat cycle now
+  daemon logs              View daemon logs
+
+SCHEDULER INSTALLATION:
+  install daemon           Use built-in daemon (default, works everywhere)
+  install cron             Use system cron (survives reboots)
+  install auto             Auto-detect best option
+                           Current: $(get_config '.scheduler.type // "daemon"')
+
+AUTONOMY LEVELS:
+  level                    Show current autonomy level
+  level list               List available levels
+  level set supervised     All actions require approval
+  level set semi-autonomous Balanced automation (default)
+  level set fully-autonomous Maximum automation within hard limits
 
 ANTI-HALLUCINATION (Required):
   task complete <name> "proof"  Must provide proof task actually works
@@ -483,6 +746,30 @@ SCHEDULING:
   schedule add <int> <task> Add schedule (e.g., '30m', '1h')
                            (max $(get_config '.agentic_config.hard_limits.max_schedules') schedules)
 
+TASK DEPENDENCIES:
+  deps add <task> <dep>    Add dependency (task requires dep first)
+  deps remove <task> <dep> Remove dependency
+  deps check <task>        Check if task can start
+  deps list <task>         List dependencies
+  deps ready               Show tasks ready to start
+  deps graph               Show dependency graph
+  deps setup               Interactive setup wizard
+
+GITHUB ACTIONS:
+  gh status                Show workflow status
+  gh trigger <workflow>    Trigger workflow run
+  gh watch <run-id>        Watch workflow run
+  gh logs <run-id>         View workflow logs
+  gh create-workflow <name> Create new workflow
+  gh setup                 Configure GitHub integration
+
+TEMPLATES:
+  template list            List available templates
+  template create <tmpl> <name>  Create task from template
+  template show <template>  Show template details
+  template save <task> <tmpl>  Save task as template
+  template new             Create custom template
+
 TOOL CREATION:
   tool list                Show custom tools
   tool create <name>       Create a new tool
@@ -491,16 +778,47 @@ SELF-UPDATE:
   update check             Check for updates from GitHub
   update apply             Apply latest update
 
+NOTIFICATIONS:
+  notify status            Check email notification status
+  notify setup             Configure email notifications
+  notify test              Send test email
+
+DATABASE:
+  db init                  Initialize database (SQLite)
+  db status                Show database status
+  db sync-to-db            Sync JSON tasks to database
+  db sync-from-db          Export database to JSON files
+  db setup                 Configure database backend
+
+API AUTH:
+  api-auth generate        Generate new API token
+  api-auth validate        Validate a token
+  api-auth list            List all tokens
+  api-auth revoke          Revoke a token
+  api-auth status          Show rate limit status
+  api-auth setup           Interactive setup wizard
+
 MONITORING:
   status                   Show workstation status and limits
   logs                     View activity logs
+  heartbeat recent         Show recent heartbeat activity
+  heartbeat stats          Show heartbeat statistics
+  check-updates            Check for available updates
+
+UTILITIES:
+  wizard                   Interactive configuration wizard
+  alias list               List command aliases
+  alias add <name> <cmd>   Add command alias
+  alias remove <name>      Remove command alias
+  version                  Show version
 
 EXAMPLES:
   autonomy work "Build a system to track my daily token usage"
   autonomy work "Research best practices for memory management"
-  autonomy work "Create a dashboard showing all my scheduled tasks"
   autonomy spawn "Analyze the codebase for security issues"
   autonomy schedule add 1h "Check for new emails"
+  autonomy alias add st "status"
+  autonomy wizard
 
 HARD LIMITS (Safety):
   • Max $(get_config '.agentic_config.hard_limits.max_concurrent_tasks') concurrent tasks
@@ -513,6 +831,10 @@ EOF
 
 # Main dispatch
 case "${1:-status}" in
+    onboard)
+        shift
+        "$AUTONOMY_DIR/onboard" "$@"
+        ;;
     status)
         show_agentic_status
         ;;
@@ -538,6 +860,14 @@ case "${1:-status}" in
         shift
         cmd_schedule "$@"
         ;;
+    deps)
+        shift
+        "$AUTONOMY_DIR/deps" "$@"
+        ;;
+    gh)
+        shift
+        "$AUTONOMY_DIR/gh" "$@"
+        ;;
     tool)
         shift
         cmd_tool "$@"
@@ -546,13 +876,64 @@ case "${1:-status}" in
         shift
         cmd_update "$@"
         ;;
+    daemon)
+        shift
+        "$AUTONOMY_DIR/daemon.sh" "$@"
+        ;;
+    install)
+        shift
+        cmd_install "$@"
+        ;;
+    level)
+        shift
+        cmd_level "$@"
+        ;;
     logs)
         tail -20 "$LOGS_DIR/agentic.jsonl" 2>/dev/null || echo "No logs yet"
+        ;;
+    wizard)
+        cmd_wizard
+        ;;
+    alias)
+        shift
+        cmd_alias "$@"
+        ;;
+    notify)
+        shift
+        "$AUTONOMY_DIR/lib/notify.sh" "$@"
+        ;;
+    db)
+        shift
+        "$AUTONOMY_DIR/db" "$@"
+        ;;
+    template)
+        shift
+        "$AUTONOMY_DIR/template" "$@"
+        ;;
+    api-auth)
+        shift
+        "$AUTONOMY_DIR/api-auth" "$@"
+        ;;
+    heartbeat)
+        shift
+        "$AUTONOMY_DIR/heartbeat" "$@"
+        ;;
+    version|-v|--version)
+        echo "Autonomy v$(get_config '.version // "2.0.0"')"
         ;;
     help|--help|-h)
         show_help
         ;;
     *)
+        # Check if it's an alias
+        if [[ -f "$AUTONOMY_DIR/state/aliases" ]]; then
+            alias_cmd=$(grep "^$1=" "$AUTONOMY_DIR/state/aliases" | cut -d= -f2-)
+            if [[ -n "$alias_cmd" ]]; then
+                echo "Running alias: $1 -> $alias_cmd"
+                bash "$AUTONOMY_DIR/autonomy" $alias_cmd "${@:2}"
+                exit 0
+            fi
+        fi
         echo "Unknown command: $1"
         echo "Run 'autonomy help' for usage"
         exit 1

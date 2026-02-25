@@ -1,0 +1,6 @@
+#!/bin/bash
+# Onboarding CLI wrapper
+# Usage: autonomy onboard {run|quick|reset|status}
+
+AUTONOMY_DIR="${AUTONOMY_DIR:-/root/.openclaw/workspace/skills/autonomy}"
+bash "$AUTONOMY_DIR/lib/onboard.sh" "$@"

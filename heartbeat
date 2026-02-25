@@ -1,0 +1,6 @@
+#!/bin/bash
+# Heartbeat activity CLI
+# Usage: autonomy heartbeat {recent|last|stats}
+
+AUTONOMY_DIR="${AUTONOMY_DIR:-/root/.openclaw/workspace/skills/autonomy}"
+bash "$AUTONOMY_DIR/lib/heartbeat-logger.sh" "$@"
