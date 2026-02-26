@@ -1818,6 +1818,27 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_json({"error": str(e)}, 500)
     
+    def serve_coordinator_stats(self):
+        """Serve coordinator statistics"""
+        try:
+            stats = {
+                "daemon_running": os.path.exists(f"{AUTONOMY_DIR}/state/heartbeat-daemon.pid"),
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Add cycle count if available
+            cycle_file = f"{AUTONOMY_DIR}/state/cycle_count"
+            if os.path.exists(cycle_file):
+                try:
+                    with open(cycle_file, 'r') as f:
+                        stats["cycle_count"] = int(f.read().strip())
+                except:
+                    stats["cycle_count"] = 0
+            
+            self.send_json(stats)
+        except Exception as e:
+            self.send_json({"error": str(e)}, 500)
+    
     def run_cmd(self, cmd):
         try:
             subprocess.run(["bash", f"{AUTONOMY_DIR}/autonomy", cmd], 
