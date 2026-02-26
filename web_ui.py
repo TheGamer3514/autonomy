@@ -233,6 +233,133 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             border-color: rgba(239,68,68,0.3);
             color: #ef4444;
         }
+        
+        /* AI Activity Box Styles */
+        .ai-activity-box {
+            background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05));
+            border: 1px solid rgba(59,130,246,0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 12px;
+            animation: aiBoxPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes aiBoxPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+            50% { box-shadow: 0 0 20px 5px rgba(59,130,246,0.2); }
+        }
+        
+        .ai-activity-indicator {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .ai-activity-indicator i {
+            font-size: 20px;
+            color: #3b82f6;
+            z-index: 2;
+        }
+        
+        .ai-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(59,130,246,0.3);
+            animation: aiPulse 1.5s ease-out infinite;
+        }
+        
+        @keyframes aiPulse {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        
+        .ai-activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .ai-activity-label {
+            font-size: 11px;
+            color: #60a5fa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        
+        .ai-activity-task {
+            font-size: 15px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .ai-activity-progress {
+            height: 4px;
+            background: rgba(59,130,246,0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .ai-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        
+        .ai-activity-logs {
+            font-size: 12px;
+            color: #93c5fd;
+            font-family: 'JetBrains Mono', monospace;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        
+        .ai-activity-logs .log-entry {
+            margin: 2px 0;
+            padding-left: 12px;
+            position: relative;
+        }
+        
+        .ai-activity-logs .log-entry::before {
+            content: '>';
+            position: absolute;
+            left: 0;
+            color: #3b82f6;
+        }
+        
+        @media (max-width: 768px) {
+            .ai-activity-box {
+                width: 100%;
+                padding: 12px 16px;
+            }
+            
+            .ai-activity-indicator {
+                width: 32px;
+                height: 32px;
+            }
+            
+            .ai-activity-indicator i {
+                font-size: 16px;
+            }
+            
+            .ai-activity-task {
+                font-size: 13px;
+            }
+        }
         .btn {
             padding: 12px 24px;
             border-radius: 12px;
@@ -1115,6 +1242,8 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 <div class="nav-item" onclick="window.open('/metrics', '_blank')"><i class="fas fa-chart-line"></i> Metrics</div>
                 <div class="nav-item" onclick="showPage('settings', this)"><i class="fas fa-cog"></i> Settings</div>
             </div>
+        </aside>
+        
         <main class="main">
             <!-- Dashboard Page -->
             <!-- Dashboard Page -->
@@ -1130,6 +1259,21 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                             <div>
                                 <div class="heartbeat-label">Next Heartbeat</div>
                                 <div class="heartbeat-timer" id="heartbeat-timer">--:--</div>
+                            </div>
+                        </div>
+                        <!-- AI Activity Box -->
+                        <div id="ai-activity-box" class="ai-activity-box" style="display: none;">
+                            <div class="ai-activity-indicator">
+                                <div class="ai-pulse"></div>
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="ai-activity-content">
+                                <div class="ai-activity-label">AI Processing</div>
+                                <div class="ai-activity-task" id="ai-current-task">Starting...</div>
+                                <div class="ai-activity-progress">
+                                    <div class="ai-progress-bar" id="ai-progress-bar"></div>
+                                </div>
+                                <div class="ai-activity-logs" id="ai-activity-logs"></div>
                             </div>
                         </div>
                         <div class="system-status-box" id="system-status">
@@ -1808,7 +1952,72 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         function workstationOn() { fetch('/api/workstation/on', {method: 'POST'}); }
         function workstationOff() { fetch('/api/workstation/off', {method: 'POST'}); }
         
-        // Initialize
+        // AI Activity Polling - Real-time updates
+        let aiActivityInterval = null;
+        let currentAiTask = null;
+        
+        async function updateAiActivity() {
+            try {
+                const res = await fetch('/api/ai/activity');
+                const data = await res.json();
+                
+                const aiBox = document.getElementById('ai-activity-box');
+                const aiTask = document.getElementById('ai-current-task');
+                const aiProgress = document.getElementById('ai-progress-bar');
+                const aiLogs = document.getElementById('ai-activity-logs');
+                
+                if (data.status === 'processing' || data.status === 'working') {
+                    // Show AI activity box
+                    aiBox.style.display = 'flex';
+                    
+                    // Update task name
+                    if (data.task && data.task !== currentAiTask) {
+                        currentAiTask = data.task;
+                        aiTask.textContent = data.task;
+                    }
+                    
+                    // Update progress
+                    if (data.progress !== undefined) {
+                        aiProgress.style.width = data.progress + '%';
+                    }
+                    
+                    // Update logs
+                    if (data.logs && data.logs.length > 0) {
+                        aiLogs.innerHTML = data.logs.slice(-3).map(log => 
+                            `<div class="log-entry">${log}</div>`
+                        ).join('');
+                    }
+                    
+                    // Also update system status
+                    const statusEl = document.getElementById('system-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = '<i class="fas fa-circle" style="color: #3b82f6;"></i> <span>AI Processing...</span>';
+                        statusEl.className = 'system-status-box';
+                    }
+                } else {
+                    // Hide AI activity box when idle
+                    aiBox.style.display = 'none';
+                    currentAiTask = null;
+                    
+                    // Reset system status
+                    const statusEl = document.getElementById('system-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = '<i class="fas fa-circle" style="color: #22c55e;"></i> <span>System Healthy</span>';
+                        statusEl.className = 'system-status-box';
+                    }
+                }
+            } catch (e) {
+                console.log('AI activity fetch failed');
+            }
+        }
+        
+        // Start AI activity polling
+        function startAiActivityPolling() {
+            if (!aiActivityInterval) {
+                updateAiActivity(); // Initial check
+                aiActivityInterval = setInterval(updateAiActivity, 2000); // Poll every 2 seconds
+            }
+        }
         initTheme();
         checkOnboarding();
         
@@ -1817,6 +2026,9 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         document.getElementById('page-dashboard').classList.add('active');
         document.querySelectorAll('.mobile-nav-item').forEach(n => n.classList.remove('active'));
         document.querySelector('.mobile-nav-item')?.classList.add('active');
+        
+        // Start real-time AI activity monitoring
+        startAiActivityPolling();
         
         loadData();
         updateHeartbeatTimer();
@@ -2333,6 +2545,8 @@ class Handler(BaseHTTPRequestHandler):
             self.serve_heartbeat()
         elif self.path == "/api/coordinator/stats":
             self.serve_coordinator_stats()
+        elif self.path == "/api/ai/activity":
+            self.serve_ai_activity()
         else:
             self.send_error(404)
     
@@ -2474,7 +2688,7 @@ class Handler(BaseHTTPRequestHandler):
         """Serve coordinator statistics"""
         try:
             stats = {
-                "daemon_running": os.path.exists(f"{AUTONOMY_DIR}/state/heartbeat-daemon.pid"),
+                "daemon_running": os.path.exists(f"{AUTONOMY_DIR}/state/daemon.pid"),
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -2490,6 +2704,47 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(stats)
         except Exception as e:
             self.send_json({"error": str(e)}, 500)
+
+    def serve_ai_activity(self):
+        """Serve real-time AI activity status"""
+        try:
+            # First check if there's a task needing attention (priority)
+            needs_attention = f"{AUTONOMY_DIR}/state/needs_attention.json"
+            if os.path.exists(needs_attention):
+                with open(needs_attention, 'r') as f:
+                    attention = json.load(f)
+                    self.send_json({
+                        "status": "processing",
+                        "task": attention.get("task_name"),
+                        "description": attention.get("description", "AI is working on a task..."),
+                        "started_at": attention.get("timestamp"),
+                        "updated_at": datetime.now().isoformat(),
+                        "progress": 50,
+                        "message": "AI is processing: " + attention.get("task_name", "task"),
+                        "logs": ["Task flagged for AI processing", "AI will start working soon..."]
+                    })
+                return
+            
+            # Check for active AI activity
+            activity_file = f"{AUTONOMY_DIR}/state/ai_activity.json"
+            if os.path.exists(activity_file):
+                with open(activity_file, 'r') as f:
+                    activity = json.load(f)
+                    # Only return if actually processing
+                    if activity.get("status") in ["processing", "working"]:
+                        self.send_json(activity)
+                        return
+            
+            # Default idle state
+            self.send_json({
+                "status": "idle",
+                "task": None,
+                "message": "Waiting for heartbeat...",
+                "progress": 0,
+                "logs": []
+            })
+        except Exception as e:
+            self.send_json({"status": "error", "message": str(e)}, 500)
     
     def run_cmd(self, cmd):
         try:
