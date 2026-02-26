@@ -5,7 +5,7 @@ import json
 import os
 import subprocess
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from datetime import datetime
+from datetime import datetime, timedelta
 
 AUTONOMY_DIR = "/root/.openclaw/workspace/skills/autonomy"
 CONFIG_FILE = f"{AUTONOMY_DIR}/config.json"
@@ -1770,46 +1770,63 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"active": False})
     
     def serve_heartbeat(self):
-        """Serve heartbeat info - simple fixed interval, always reliable"""
+        """Serve heartbeat info - flexible interval, always reliable"""
         try:
-            # Read from the simple check file
+            # Try flexible daemon first
             check_file = f"{AUTONOMY_DIR}/state/last-check.json"
             last_check = None
-            interval_seconds = 300  # 5 minutes default
+            interval_minutes = 5
             
             if os.path.exists(check_file):
                 try:
                     with open(check_file, 'r') as f:
                         data = json.load(f)
                         last_check = data.get("last_check")
-                        interval_seconds = data.get("interval_seconds", 300)
+                        interval_minutes = data.get("interval_minutes", 5)
                 except:
                     pass
             
-            # Fallback to log file if no check file
+            # Fallback to simple daemon
             if not last_check:
-                log_file = f"{AUTONOMY_DIR}/logs/heartbeat.log"
-                if os.path.exists(log_file):
+                simple_check = f"{AUTONOMY_DIR}/state/last-check.json"
+                if os.path.exists(simple_check):
                     try:
-                        with open(log_file, 'r') as f:
-                            lines = f.readlines()
-                            for line in reversed(lines):
-                                if "HEARTBEAT CHECK:" in line:
-                                    # Parse timestamp from log line
-                                    last_check = line.split("HEARTBEAT CHECK:")[1].strip()
-                                    break
+                        with open(simple_check, 'r') as f:
+                            data = json.load(f)
+                            last_check = data.get("last_check")
+                            interval_minutes = data.get("interval_minutes", 5)
                     except:
                         pass
             
-            # Check if daemon is running
-            pid_file = f"{AUTONOMY_DIR}/state/daemon.pid"
-            daemon_running = os.path.exists(pid_file) and os.path.getsize(pid_file) > 0
+            # Check if any daemon is running
+            daemon_running = False
+            if os.path.exists(f"{AUTONOMY_DIR}/state/daemon.pid"):
+                try:
+                    with open(f"{AUTONOMY_DIR}/state/daemon.pid", 'r') as f:
+                        pid = int(f.read().strip())
+                        # Check if process exists (signal 0 doesn't kill, just checks)
+                        import signal
+                        os.kill(pid, 0)
+                        daemon_running = True
+                except (ProcessLookupError, ValueError, OSError):
+                    daemon_running = False
+                except:
+                    daemon_running = False
+            
+            # Calculate next check
+            next_check = None
+            if last_check:
+                try:
+                    last_time = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+                    next_check = (last_time + timedelta(minutes=interval_minutes)).isoformat()
+                except:
+                    pass
             
             self.send_json({
                 "last_check": last_check,
-                "interval_seconds": interval_seconds,
+                "interval_minutes": interval_minutes,
                 "daemon_running": daemon_running,
-                "next_check": "in 5 minutes"
+                "next_check": next_check
             })
         except Exception as e:
             self.send_json({"error": str(e)}, 500)
