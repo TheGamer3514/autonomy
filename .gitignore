@@ -1,1 +1,42 @@
-tests/state/*
+# Runtime files - do not commit
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Runtime data
+state/
+logs/
+data/
+tasks/*.json
+tasks/!continuous-improvement.json
+templates/*.json
+!templates/.gitkeep
+
+# Local config
+config.json
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+nohup.out
